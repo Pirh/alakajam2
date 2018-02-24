@@ -47,6 +47,18 @@ end
 -- utilities and constants
 dt = 1.0 / 60.0
 
+maxspeed = 96
+jumpheight = 24
+jumpdistance = 40
+airtime = jumpdistance / maxspeed
+startingdistance = 8
+stoppingdistance = 4
+accel = (maxspeed * maxspeed) / (2.0 * startingdistance)
+decel = (maxspeed * maxspeed) / (2.0 * stoppingdistance)
+jumpspeed = (2.0 * jumpheight) / (airtime / 2.0)
+gravity = 2.0 * jumpheight / (airtime * airtime * 0.25)
+jumpgravscale = 5.0
+
 rectps = {
     {0,0},
     {7,0},
@@ -81,6 +93,10 @@ end
 
 function lerp(a, b, t)
   return a * (1-t) + b*t
+end
+
+function clamp(n, lo, hi)
+  return min(max(lo, n), hi)
 end
 
 function binary_sweep(x0, y0, x1, y1)
@@ -137,7 +153,7 @@ function gameinit()
         player = {
           x=pix(mx), y=pix(my),
           vx=0, vy=0,
-          colliding = false,
+          grounded = false,
         }
       end
     end
@@ -145,15 +161,30 @@ function gameinit()
 end
 
 function gameupdate()
-  local vx = 0
-  if btn(0) then vx -= 24 end
-  if btn(1) then vx += 24 end
-  player.vx = vx
+  local facing = 0
+  if btn(0) then facing -= 1 end
+  if btn(1) then facing += 1 end
+  player.vx += facing * accel
+  player.vx = clamp(player.vx, -maxspeed, maxspeed)
   
-  player.vy += 100 * dt
+  if facing == 0 then
+    local friction = decel * dt
+    if abs(player.vx) < friction then
+      player.vx = 0
+    else
+      player.vx -= sgn(player.vx) * friction
+    end
+  end
+  
+  local grav = gravity
+  if player.vy < 0 and not btn(4) then
+    grav *= jumpgravscale
+  end
+  
+  player.vy += grav * dt
   if btnp(4) and player.grounded then
     player.grounded = false
-    player.vy = -70
+    player.vy = -jumpspeed
   end
 
   -- vertical movement
