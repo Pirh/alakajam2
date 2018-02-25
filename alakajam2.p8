@@ -318,11 +318,12 @@ function gameupdate()
   if player.y > pix(24) then
     if not nextlevel then
       sfx(10)
-    end
-    if lv.darkreset then
-      nextlevel = lv.darkreset
-    else
-      nextlevel = level
+    
+      if lv.darkreset then
+        nextlevel = lv.darkreset
+      else
+        nextlevel = level
+      end
     end
   end
   
