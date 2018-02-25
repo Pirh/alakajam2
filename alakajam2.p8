@@ -58,6 +58,8 @@ decel = (maxspeed * maxspeed) / (2.0 * stoppingdistance)
 jumpspeed = (2.0 * jumpheight) / (airtime / 2.0)
 gravity = 2.0 * jumpheight / (airtime * airtime * 0.25)
 jumpgravscale = 5.0
+fadespeed = 1.5
+fadecurve = 4
 
 rectps = {
     {0,0},
@@ -161,10 +163,14 @@ end
 -- game state
 
 level = 0
+fadecol = 0
 
 function gameinit()
   player = nil
   things = {}
+  fade = 1
+  fadein = true
+  nextlevel = nil
   local lv = levels[level+1]
   local ox = lv.ox * 16
   local oy = lv.oy * 16
@@ -194,6 +200,8 @@ function gameupdate()
   local lv = levels[level+1]
   local ox = lv.ox * 16
   local oy = lv.oy * 16
+  
+  fade = max(0, fade - dt * fadespeed)
   
   local facing = 0
   if btn(0) then facing -= 1 end
@@ -254,18 +262,31 @@ function gameupdate()
   
   if player.y > pix(24) then
     if lv.darkreset then
-      level = lv.darkreset
+      nextlevel = lv.darkreset
+    else
+      nextlevel = level
     end
-    changestate(states.game)
   end
   
   for other in all(things) do
     if player != other then
       local collided = rect_hits_rect(player.x, player.y, other.x, other.y)
       if collided then
-        level += 1
-        changestate(states.game)
+        nextlevel = level + 1
       end
+    end
+  end
+
+  if nextlevel then
+    local darkwipe = lv.darkreset or levels[nextlevel+1].darkreset
+    fadecol = darkwipe and 8 or 0
+    
+    if fadein then
+      fadein = false
+      fade = 1
+    elseif fade == 0 then
+      level = nextlevel
+      changestate(states.game)
     end
   end
 end
@@ -275,11 +296,20 @@ function gamedraw()
   local ox = lv.ox * 16
   local oy = lv.oy * 16
   
-  cls(1-level)
+  cls(lv.darkreset and 0 or 1)
   map(ox, oy, 0, 0, 16, 16, 0x80)
   
   for thing in all(things) do
     spr(thing.sp, thing.x, thing.y)
+  end
+  
+  if fade > 0 then
+    local t = fade ^ fadecurve
+    if fadein then
+      rectfill(0, 128 - (t * 128), 128, 128, fadecol)
+    else
+      rectfill(0, 0, 128, 128 - (t * 128), fadecol)
+    end
   end
 end
 -->8
@@ -300,7 +330,7 @@ end
 __gfx__
 00000000000070006666666699999999000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000077706cccccc69aaaaaa9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000070706cccccc69aaaaaa9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000075706cccccc69aaaaaa9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000000777776cccccc69aaaaaa9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000007777006cccccc69aaaaaa9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700077770706cccccc69aaaaaa9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
